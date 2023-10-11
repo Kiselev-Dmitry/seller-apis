@@ -12,7 +12,21 @@ logger = logging.getLogger(__file__)
 
 
 def get_product_list(last_id, client_id, seller_token):
-    """Получить список товаров магазина озон"""
+    """Получить список товаров магазина Озон.
+
+    Отправить запрос на сайт Озон и получить список товаров.
+
+    Аргументы:
+        last_id (str): идентификатор прошлого запроса ("" в момент отправки первого)
+        client_id (str): уникальный идентификатор клиента Озон
+        seller_token (str): уникальный идентификатор продавца Озон
+
+    Возвращаемые значения:
+        dict: Список товаров
+
+    Исключения:
+        HTTPError
+    """
     url = "https://api-seller.ozon.ru/v2/product/list"
     headers = {
         "Client-Id": client_id,
@@ -32,7 +46,20 @@ def get_product_list(last_id, client_id, seller_token):
 
 
 def get_offer_ids(client_id, seller_token):
-    """Получить артикулы товаров магазина озон"""
+    """Получить артикулы товаров магазина Озон
+
+    Получить список артикулов из общего списка товаров магазина озон.
+
+    Аргументы:
+        client_id (str): уникальный идентификатор клиента озон
+        seller_token (str): уникальный идентификатор продавца озон
+
+    Возвращаемые значения:
+        list: список артикулов
+
+    Исключения:
+        HTTPError
+    """
     last_id = ""
     product_list = []
     while True:
@@ -49,7 +76,21 @@ def get_offer_ids(client_id, seller_token):
 
 
 def update_price(prices: list, client_id, seller_token):
-    """Обновить цены товаров"""
+    """Обновить цены товаров
+
+    Обновить цены наших товаров на сайте озон.
+
+    Аргументы:
+        prices (list): список цен
+        client_id (str): уникальный идентификатор клиента озон
+        seller_token (str): уникальный идентификатор продавца озон
+
+    Возвращаемые значения:
+        dict: ответ от сайта
+
+    Исключения:
+        HTTPError
+    """
     url = "https://api-seller.ozon.ru/v1/product/import/prices"
     headers = {
         "Client-Id": client_id,
@@ -62,7 +103,21 @@ def update_price(prices: list, client_id, seller_token):
 
 
 def update_stocks(stocks: list, client_id, seller_token):
-    """Обновить остатки"""
+    """Обновить остатки.
+
+    Обновить остатки товаров, отправив post-запрос на сайт озон.
+
+    Аргументы:
+        stocks (list): список остатков
+        client_id (str): уникальный идентификатор клиента озон
+        seller_token (str): уникальный идентификатор продавца озон
+
+    Возвращаемые значения:
+        dict: ответ от сайта
+
+    Исключения:
+        HTTPError
+    """
     url = "https://api-seller.ozon.ru/v1/product/import/stocks"
     headers = {
         "Client-Id": client_id,
@@ -75,7 +130,16 @@ def update_stocks(stocks: list, client_id, seller_token):
 
 
 def download_stock():
-    """Скачать файл ostatki с сайта casio"""
+    """Скачать файл ostatki с сайта casio
+
+    Скачать файл ostatki.zip с сайта casio, получить из него данные и удалить файл.
+
+    Возвращаемые значения:
+        list: данные об остатках из файла
+
+    Исключения:
+            HTTPError
+    """
     # Скачать остатки с сайта
     casio_url = "https://timeworld.ru/upload/files/ostatki.zip"
     session = requests.Session()
@@ -96,6 +160,20 @@ def download_stock():
 
 
 def create_stocks(watch_remnants, offer_ids):
+    """Создать актуальный список остатков.
+
+    Создать актуальный список остатков, добавить недостающее и привести список к единому виду.
+
+    Аргументы:
+        watch_remnants (list): данные об остатках с сайта
+        offer_ids (list): список артикулов
+
+    Возвращаемые значения:
+        list: актуальный список остатков
+
+    Исключения:
+        HTTPError
+    """
     # Уберем то, что не загружено в seller
     stocks = []
     for watch in watch_remnants:
@@ -116,6 +194,20 @@ def create_stocks(watch_remnants, offer_ids):
 
 
 def create_prices(watch_remnants, offer_ids):
+    """Создать список актуальных цен.
+
+    Из общего списка данных получить список цен в нужной форме.
+
+    Аргументы:
+        watch_remnants (list): общий список данных
+        offer_ids (list): список артикулов
+
+    Возвращаемые значения:
+        list: список актуальных цен
+
+    Исключения:
+        HTTPError
+    """
     prices = []
     for watch in watch_remnants:
         if str(watch.get("Код")) in offer_ids:
@@ -131,7 +223,21 @@ def create_prices(watch_remnants, offer_ids):
 
 
 def price_conversion(price: str) -> str:
-    """Преобразовать цену. Пример: 5'990.00 руб. -> 5990"""
+    """Преобразовать формат цены.
+
+    Преобразовать произвольный вид цены в однотипный формат.
+
+    Аргумент:
+        price (str): произвольная цена.
+
+    Возвращает значение:
+        str: преобразованная строка.
+
+    Примеры:
+        \>>> price = "5'990.00 руб"
+        \>>> price_conversion(price)
+        5990
+     """
     return re.sub("[^0-9]", "", price.split(".")[0])
 
 
@@ -142,6 +248,20 @@ def divide(lst: list, n: int):
 
 
 async def upload_prices(watch_remnants, client_id, seller_token):
+    """Актуализировать список цен и обновить их на сайте озон.
+
+    Из общего списка данных получить список цен в нужной форме. Обновить цены наших товаров на сайте озон.
+
+    Аргументы:
+        watch_remnants (list): общий список данных
+        client_id (str): уникальный идентификатор клиента озон
+        seller_token (str): уникальный идентификатор продавца озон
+    Возвращаемые значения:
+        list: список актуальных цен
+
+    Исключения:
+        HTTPError
+    """
     offer_ids = get_offer_ids(client_id, seller_token)
     prices = create_prices(watch_remnants, offer_ids)
     for some_price in list(divide(prices, 1000)):
@@ -150,6 +270,21 @@ async def upload_prices(watch_remnants, client_id, seller_token):
 
 
 async def upload_stocks(watch_remnants, client_id, seller_token):
+    """Создать актуальный список остатков и обновить остатки.
+
+    Создать актуальный список остатков, добавить недостающее и привести список к единому виду. Обновить остатки товаров, отправив post-запрос на сайт озон.
+
+        Аргументы:
+            watch_remnants (list): общий список данных
+            client_id (str): уникальный идентификатор клиента озон
+            seller_token (str): уникальный идентификатор продавца озон
+        Возвращаемые значения:
+            list: список товаров с положительными остатками
+            list: актуальный список остатков
+
+        Исключения:
+            HTTPError
+    """
     offer_ids = get_offer_ids(client_id, seller_token)
     stocks = create_stocks(watch_remnants, offer_ids)
     for some_stock in list(divide(stocks, 100)):
