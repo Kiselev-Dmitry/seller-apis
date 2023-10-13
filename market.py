@@ -11,6 +11,19 @@ logger = logging.getLogger(__file__)
 
 
 def get_product_list(page, campaign_id, access_token):
+    """Получить список товаров с сайта Яндекс-Маркет.
+
+    Аргументы:
+        page (str): номер страницы
+        campaign_id (str): идентификатор компании-продавца
+        access_token (str): токен для Яндекс-Маркет
+
+    Возвращаемые значения:
+        dict: список товаров от сайта
+
+    Исключения:
+        HTTPError
+    """
     endpoint_url = "https://api.partner.market.yandex.ru/"
     headers = {
         "Content-Type": "application/json",
@@ -30,6 +43,19 @@ def get_product_list(page, campaign_id, access_token):
 
 
 def update_stocks(stocks, campaign_id, access_token):
+    """Обновить данные об остатках на сайте Яндекс-Маркет.
+
+    Аргументы:
+        stocks (list): данные об остатках
+        campaign_id (str): идентификатор компании-продавца
+        access_token (str): токен для Яндекс-Маркет
+
+    Возвращаемые значения:
+        dict: ответ от сайта
+
+    Исключения:
+       HTTPError
+    """
     endpoint_url = "https://api.partner.market.yandex.ru/"
     headers = {
         "Content-Type": "application/json",
@@ -46,6 +72,21 @@ def update_stocks(stocks, campaign_id, access_token):
 
 
 def update_price(prices, campaign_id, access_token):
+    """Загрузить данные о ценах на сайт Яндекс-Маркет.
+
+    Аргументы:
+        prices (str): данные о ценах
+        campaign_id (str): идентификатор компании-продавца
+        access_token (str): токен для Яндекс-Маркет
+
+    Возвращаемые значения:
+        dict: ответ от сайта
+
+    Исключения:
+       HTTPError
+    """
+
+
     endpoint_url = "https://api.partner.market.yandex.ru/"
     headers = {
         "Content-Type": "application/json",
@@ -62,7 +103,20 @@ def update_price(prices, campaign_id, access_token):
 
 
 def get_offer_ids(campaign_id, market_token):
-    """Получить артикулы товаров Яндекс маркета"""
+    """Получить артикулы товаров Яндекс-маркета.
+
+    Из общего списка товаров на Яндекс-Маркет получить список артикулов.
+
+    Аргументы:
+        campaign_id (str): идентификатор компании-продавца
+        access_token (str): токен для Яндекс-Маркет
+
+    Возвращаемые значения:
+        list: список артикулов
+
+    Исключения:
+       HTTPError
+    """
     page = ""
     product_list = []
     while True:
@@ -78,6 +132,18 @@ def get_offer_ids(campaign_id, market_token):
 
 
 def create_stocks(watch_remnants, offer_ids, warehouse_id):
+    """Получить актуальный список остатков.
+
+    Актуализивароть список остатков, добавить недостающее и привести список к единому виду.
+
+    Аргументы:
+        watch_remnants (list): данные об остатках с сайта
+        offer_ids (list): список артикулов
+        warehouse_id (str): уникальный идентификатор склада для FBS или DBS
+
+    Возвращаемые значения:
+        list: дополненный список остатков
+    """
     # Уберем то, что не загружено в market
     stocks = list()
     date = str(datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z")
@@ -123,6 +189,17 @@ def create_stocks(watch_remnants, offer_ids, warehouse_id):
 
 
 def create_prices(watch_remnants, offer_ids):
+    """Получить список актуальных цен.
+
+    Из общего списка данных получить список цен в нужной форме
+
+    Аргументы:
+        watch_remnants (list): данные об остатках с сайта
+        offer_ids (list): список артикулов
+
+    Возвращаемые значения:
+        list: структурированный список цен
+    """
     prices = []
     for watch in watch_remnants:
         if str(watch.get("Код")) in offer_ids:
@@ -143,6 +220,20 @@ def create_prices(watch_remnants, offer_ids):
 
 
 async def upload_prices(watch_remnants, campaign_id, market_token):
+    """Структурировать список цен и обновить их на Яндекс-маркете.
+
+    Аргументы:
+        watch_remnants (list): общий список остатков
+        campaign_id (str): идентификатор компании-продавца
+        access_token (str): токен для Яндекс-Маркет
+
+    Возвращаемые значения:
+        list: структурированный список цен
+
+    Исключения:
+       HTTPError
+    """
+
     offer_ids = get_offer_ids(campaign_id, market_token)
     prices = create_prices(watch_remnants, offer_ids)
     for some_prices in list(divide(prices, 500)):
@@ -151,6 +242,21 @@ async def upload_prices(watch_remnants, campaign_id, market_token):
 
 
 async def upload_stocks(watch_remnants, campaign_id, market_token, warehouse_id):
+    """Структурировать список остатков и отправить их на Яндекс-маркет.
+
+    Аргументы:
+        watch_remnants (list): общий список остатков
+         campaign_id (str): идентификатор компании-продавца
+        access_token (str): токен для Яндекс-Маркет
+        warehouse_id (str): уникальный идентификатор склада для FBS или DBS
+
+    Возвращаемые значения:
+        list: список товаров с положительными остатками
+        list: структурированный список остатков
+
+    Исключения:
+       HTTPError
+    """
     offer_ids = get_offer_ids(campaign_id, market_token)
     stocks = create_stocks(watch_remnants, offer_ids, warehouse_id)
     for some_stock in list(divide(stocks, 2000)):
